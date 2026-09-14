@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Runtime data — never commit shop data, DBs, logs, or secrets
+data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Certificates / credentials / local config
+certs/
+*.key
+*.crt
+credential*.json
+config.local.json
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
