@@ -62,3 +62,28 @@ an issue or pull request.
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
 
 Copyright (C) 2026 Ceasar Enterprises.
+
+## Adoption telemetry (opt-in, anonymous)
+
+How do we know anyone is actually running the engine? `nebula_offline_sync.telemetry`:
+
+- **Local always-on ledger (no network):** a random install id + lifecycle events
+  (`install`, `sync_completed`) are appended to a JSONL file under the user data
+  dir on every run.
+- **Network ping is STRICT opt-in:** `report()` / `report_async()` send only the
+  aggregate snapshot (install id, version, platform, event counts) — no business
+  or personal data — and only when an embedding application explicitly passes
+  `enabled=True` (and optionally its own endpoint URL). Default: disabled.
+- Verified by tests: `tests/test_telemetry.py`.
+
+## Releasing to PyPI
+
+```powershell
+$env:TWINE_USERNAME = "__token__"
+$env:TWINE_PASSWORD = "pypi-..."      # project-scoped token; keep out of the repo
+python scripts\release-pypi.py         # prod PyPI
+python scripts\release-pypi.py --test  # TestPyPI first (recommended)
+```
+
+The first released version is a hard adoption milestone: from then on, download
+counts on PyPI plus the opt-in ledger are the "is anyone using it" evidence.

@@ -17,6 +17,7 @@ from .model import (
     StockMovement,
     Transaction,
 )
+from .telemetry import install_id, record, report, report_async
 
 __all__ = [
     "Checkpoint",
@@ -27,6 +28,10 @@ __all__ = [
     "Receivable",
     "StockMovement",
     "Transaction",
+    "install_id",
+    "record",
+    "report",
+    "report_async",
 ]
 
 __version__ = "0.1.0"
