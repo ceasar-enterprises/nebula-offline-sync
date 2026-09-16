@@ -11,6 +11,7 @@ hashing, and SQLite persistence are Phase 1 work.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from typing import Any, Dict, List, Optional
@@ -85,6 +86,16 @@ def dumps_snapshot(store: LocalStore) -> str:
         v = store._objects[key]
         rows.append([v["kind"], v["id"], json.dumps(v["payload"], sort_keys=True), v["node"], v["seq"]])
     return json.dumps(rows, sort_keys=True)
+
+
+def fingerprint(store: LocalStore) -> str:
+    """sha256 of the deterministic snapshot — the `state_hash` primitive.
+
+    Deterministic across runs and machines given identical object sets, so
+    two nodes that have converged produce the same fingerprint. This is the
+    building block for the tamper-evident checkpoint chain (Phase 1).
+    """
+    return hashlib.sha256(dumps_snapshot(store).encode("utf-8")).hexdigest()
 
 
 __all__ = ["LocalStore", "StoreError", "dumps_snapshot"]
