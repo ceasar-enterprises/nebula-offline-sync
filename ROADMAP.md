@@ -10,6 +10,8 @@ references and will move with the extraction work.
 - [x] Public domain data types (model.py: ProductItem, StockMovement,
       Order/OrderItem, Receivable, Transaction, Outlet, Checkpoint) + contract
       tests (2026-09-15)
+- [x] Storage seam (store.py: LocalStore put/get/update/sync + snapshot) with
+      telemetry lifecycle hooks (2026-09-15)
 - [ ] Extract the offline engine core from the NEBULA product into this package
 - [x] Model the engine domain objects (inventory, batches/expiry, sales, receipts,
       debtors, reconciliation events) as public data types
