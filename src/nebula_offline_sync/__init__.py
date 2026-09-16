@@ -7,4 +7,26 @@ Extracted and matured from the NEBULA business platform (proprietary). Only the
 engine core lives here; product logic stays closed.
 """
 
+from .model import (
+    Checkpoint,
+    Order,
+    OrderItem,
+    Outlet,
+    ProductItem,
+    Receivable,
+    StockMovement,
+    Transaction,
+)
+
+__all__ = [
+    "Checkpoint",
+    "Order",
+    "OrderItem",
+    "Outlet",
+    "ProductItem",
+    "Receivable",
+    "StockMovement",
+    "Transaction",
+]
+
 __version__ = "0.1.0"
