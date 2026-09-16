@@ -7,8 +7,11 @@ references and will move with the extraction work.
 ## Phase 0 — Foundation (2026-09 to 2026-10)
 
 - [x] Repository scaffold, project metadata, AGPL-3.0 licensing
+- [x] Public domain data types (model.py: ProductItem, StockMovement,
+      Order/OrderItem, Receivable, Transaction, Outlet, Checkpoint) + contract
+      tests (2026-09-15)
 - [ ] Extract the offline engine core from the NEBULA product into this package
-- [ ] Model the engine domain objects (inventory, batches/expiry, sales, receipts,
+- [x] Model the engine domain objects (inventory, batches/expiry, sales, receipts,
       debtors, reconciliation events) as public data types
 - [ ] First public release (v0.1) with working local storage and single-store API
 
