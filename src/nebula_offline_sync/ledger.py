@@ -32,4 +32,24 @@ def stock_of(store: LocalStore, product_id: str) -> int:
     return baseline + sum(deltas)
 
 
-__all__ = ["stock_of"]
+def outstanding_of(store: LocalStore, receivable_id: str) -> int:
+    """Derived outstanding balance: amount − Σ payments, never negative.
+
+    Amount is the baseline fixed when the credit is created (like stock's
+    initial). Payments are append-only `payment` events, so two nodes that
+    collected different fractions of the debt converge to the same outstanding
+    after merge — add-wins, order-independent. A node that has seen payment
+    events but not the receivable record yet treats amount as 0 and stays
+    non-negative, converging as soon as the record arrives.
+    """
+    receivable = store.get("receivable", receivable_id)
+    amount = int(receivable.get("amount", 0)) if receivable else 0
+    paid = sum(
+        int(p["payload"].get("delta", 0))
+        for p in store.all()
+        if p["kind"] == "payment" and p["payload"].get("receivable_id") == receivable_id
+    )
+    return max(amount - paid, 0)
+
+
+__all__ = ["stock_of", "outstanding_of"]

@@ -127,13 +127,59 @@ def test_i2_stock_converges_regardless_of_merge_order():
         assert set(finals.values()) == {expected}, (order, finals)
 
 
-@pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
 def test_i3_outstanding_never_negative(node_a, node_b):
     """outstanding == amount_seen - paid_seen >= 0 on every node."""
-    node_a.store.put("receivable", "R1", {"amount": 100000, "paid": 0, "status": "open"})
-    node_b.store.put("receivable", "R1", {"amount": 100000, "paid": 40000, "status": "partial"})
+    from nebula_offline_sync.ledger import outstanding_of
+
+    for node in (node_a, node_b):
+        node.store.put("receivable", "R1", {"amount": 100000, "status": "open"})
+    node_a.store.put("payment", "PAY1", {"receivable_id": "R1", "delta": 30000, "method": "momo"})
+    node_b.store.put("payment", "PAY2", {"receivable_id": "R1", "delta": 40000, "method": "cash"})
+
+    assert outstanding_of(node_a.store, "R1") == 70000  # own view: 100000 - 30000
+    assert outstanding_of(node_b.store, "R1") == 60000  # own view: 100000 - 40000
+
     node_a.merge_into(node_b)
     node_b.merge_into(node_a)
+
+    expected = 100000 - 30000 - 40000  # 30000 on every node, in any order
+    assert outstanding_of(node_a.store, "R1") == expected
+    assert outstanding_of(node_b.store, "R1") == expected
+    assert logical_state(node_a.store) == logical_state(node_b.store)
+
+
+def test_i3_outstanding_converges_regardless_of_merge_order():
+    """Property: every merge order of the same payment facts converges."""
+    import itertools
+
+    from nebula_offline_sync.ledger import outstanding_of
+
+    def build() -> dict:
+        engines = {nid: _MergeEngine(node_id=nid) for nid in "ABC"}
+        for engine in engines.values():
+            engine.store.put("receivable", "R1", {"amount": 100000, "status": "open"})
+        payments = {
+            "A": [("PAY-A1", 10000)],
+            "B": [("PAY-B1", 25000)],
+            "C": [("PAY-C1", 15000)],
+        }
+        for nid, pays in payments.items():
+            for pid, delta in pays:
+                engines[nid].store.put(
+                    "payment", pid, {"receivable_id": "R1", "delta": delta, "method": "test"}
+                )
+        return engines
+
+    expected = 100000 - 10000 - 25000 - 15000  # 50000 outstanding
+
+    for order in itertools.permutations("ABC"):
+        engines = build()
+        for src in order:
+            for dst in order:
+                if src != dst:
+                    engines[src].merge_into(engines[dst])
+        finals = {nid: outstanding_of(engine.store, "R1") for nid, engine in engines.items()}
+        assert set(finals.values()) == {expected}, (order, finals)
 
 
 @pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
