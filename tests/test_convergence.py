@@ -14,6 +14,22 @@ import pytest
 from nebula_offline_sync.store import LocalStore, fingerprint
 
 
+def logical_state(store) -> str:
+    """Payload-level snapshot for cross-node comparison.
+
+    `fingerprint()` includes per-node metadata (node id + seq), so two
+    different nodes never produce identical fingerprints even when logically
+    converged. Logical convergence is payload equality, not raw fingerprint
+    equality (see docs/merge-semantics.md I1 discussion).
+    """
+    import json
+
+    rows = []
+    for item in store.all():
+        rows.append([item["kind"], item["id"], json.dumps(item["payload"], sort_keys=True)])
+    return json.dumps(sorted(rows))
+
+
 class _MergeEngine:
     """Placeholder for the applicant's merge core.
 
@@ -56,14 +72,59 @@ def test_i1_convergence_after_same_mutation_set(node_a, node_b):
     assert fingerprint(node_a.store) == fingerprint(node_b.store)
 
 
-@pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
 def test_i2_stock_equals_initial_plus_deltas(node_a, node_b):
     """stock(product) == initial + sum(deltas) regardless of merge order."""
-    node_a.store.put("product", "P1", {"stock": 0, "name": "Item"})
+    from nebula_offline_sync.ledger import stock_of
+
+    for node in (node_a, node_b):
+        node.store.put("product", "P1", {"stock": 10, "name": "Item"})
     node_a.store.put("movement", "M1", {"product_id": "P1", "delta": 5, "reason": "restock"})
     node_b.store.put("movement", "M2", {"product_id": "P1", "delta": -2, "reason": "sale"})
+
+    assert stock_of(node_a.store, "P1") == 15  # own view: 10 + 5
+    assert stock_of(node_b.store, "P1") == 8   # own view: 10 + (-2)
+
     node_a.merge_into(node_b)
     node_b.merge_into(node_a)
+
+    expected = 10 + 5 + (-2)  # 13 on every node, in any order
+    assert stock_of(node_a.store, "P1") == expected
+    assert stock_of(node_b.store, "P1") == expected
+    assert logical_state(node_a.store) == logical_state(node_b.store)
+
+
+def test_i2_stock_converges_regardless_of_merge_order():
+    """Property: every merge order of the same facts yields the same stock."""
+    import itertools
+
+    from nebula_offline_sync.ledger import stock_of
+
+    def build() -> dict:
+        engines = {nid: _MergeEngine(node_id=nid) for nid in "ABC"}
+        for engine in engines.values():
+            engine.store.put("product", "P1", {"stock": 10, "name": "Item"})
+        movements = {
+            "A": [("M1", 5)],
+            "B": [("M2", -2)],
+            "C": [("M3", 7)],
+        }
+        for nid, moves in movements.items():
+            for mid, delta in moves:
+                engines[nid].store.put(
+                    "movement", mid, {"product_id": "P1", "delta": delta, "reason": "test"}
+                )
+        return engines
+
+    expected = 10 + 5 + (-2) + 7  # 20
+
+    for order in itertools.permutations("ABC"):
+        engines = build()
+        for src in order:
+            for dst in order:
+                if src != dst:
+                    engines[src].merge_into(engines[dst])
+        finals = {nid: stock_of(engine.store, "P1") for nid, engine in engines.items()}
+        assert set(finals.values()) == {expected}, (order, finals)
 
 
 @pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
