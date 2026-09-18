@@ -182,13 +182,57 @@ def test_i3_outstanding_converges_regardless_of_merge_order():
         assert set(finals.values()) == {expected}, (order, finals)
 
 
-@pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
 def test_i4_paid_status_propagates(node_a, node_b):
     """An order marked paid on one node is paid on all after merge."""
     node_a.store.put("order", "O1", {"total": 500, "status": "paid"})
     node_b.store.put("order", "O1", {"total": 500, "status": "new"})
     node_a.merge_into(node_b)
     node_b.merge_into(node_a)
+    assert node_a.store.get("order", "O1")["status"] == "paid"
+    assert node_b.store.get("order", "O1")["status"] == "paid"
+    assert logical_state(node_a.store) == logical_state(node_b.store)
+
+
+def test_i4_status_converges_regardless_of_merge_order():
+    """Property: a paid observation propagates in every merge order."""
+    import itertools
+
+    def build() -> dict:
+        engines = {nid: _MergeEngine(node_id=nid) for nid in "ABC"}
+        statuses = {"A": "new", "B": "paid", "C": "new"}
+        for nid, status in statuses.items():
+            engines[nid].store.put("order", "O1", {"total": 500, "status": status})
+        return engines
+
+    for order in itertools.permutations("ABC"):
+        engines = build()
+        for src in order:
+            for dst in order:
+                if src != dst:
+                    engines[src].merge_into(engines[dst])
+        finals = {nid: engines[nid].store.get("order", "O1")["status"] for nid in "ABC"}
+        assert set(finals.values()) == {"paid"}, (order, finals)
+
+
+def test_i4_concurrent_paid_tiebreak_is_deterministic():
+    """Two nodes marking the same order paid converge to one status."""
+    import itertools
+
+    def build() -> dict:
+        engines = {nid: _MergeEngine(node_id=nid) for nid in "AB"}
+        for nid in "AB":
+            engines[nid].store.put("order", "O1", {"total": 500, "status": "paid"})
+        return engines
+
+    outcomes = set()
+    for order in itertools.permutations("AB"):
+        engines = build()
+        for src in order:
+            for dst in order:
+                if src != dst:
+                    engines[src].merge_into(engines[dst])
+        outcomes.add(tuple(engines[nid].store.get("order", "O1")["status"] for nid in "AB"))
+    assert len(outcomes) == 1  # same status on both nodes, same answer every order
 
 
 def test_i5_merge_is_idempotent(node_a):
