@@ -62,14 +62,22 @@ def node_b():
     return _MergeEngine(node_id="B")
 
 
-@pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
 def test_i1_convergence_after_same_mutation_set(node_a, node_b):
     """Two nodes that performed the same mutations converge to identical state."""
     payload = {"stock": 10, "name": "Item"}
     node_a.apply_event("product", "P1", payload)
     node_b.apply_event("product", "P1", payload)
     node_a.merge_into(node_b)
-    assert fingerprint(node_a.store) == fingerprint(node_b.store)
+    assert logical_state(node_a.store) == logical_state(node_b.store)
+
+
+def test_i1_divergent_nodes_do_not_converge():
+    """Convergence check detects a real difference (payload-level, not metadata)."""
+    node_a = _MergeEngine(node_id="A")
+    node_b = _MergeEngine(node_id="B")
+    node_a.apply_event("product", "P1", {"stock": 10, "name": "Item"})
+    node_b.apply_event("product", "P1", {"stock": 9, "name": "Item"})
+    assert logical_state(node_a.store) != logical_state(node_b.store)
 
 
 def test_i2_stock_equals_initial_plus_deltas(node_a, node_b):

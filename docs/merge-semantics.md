@@ -39,8 +39,11 @@ larger vector). **Counter = add-wins** so concurrent increments never clobber.
 
 ## Convergence invariants (must hold after any merge, verified by tests)
 
-- I1: any two nodes that have performed the same set of mutations reach byte-
-- identical state (snapshot equality).
+- I1: any two nodes that performed the same set of mutations converge to
+- identical payload state: same objects with the same payloads (order contents,
+- stock, receivable balances) on every node. Checkpoint/git-style metadata
+- (node id, sequence) is intentionally excluded so convergence is judged on the
+- data that matters.
 - I2: `stock(product) == initial + Σ deltas` on every node, always.
 - I3: `outstanding(receivable) == amount_seen − paid_seen ≥ 0` on every node.
 - I4: an order marked paid on any node is marked paid on all nodes after merge.
@@ -58,6 +61,14 @@ A checkpoint = `{node, seq, prev_hash, state_hash}` where `state_hash` is
 `sha256(dumps_snapshot(store))`. Chaining makes tampering detectable and
 re-sync resumable. Phase 0 exposes `dumps_snapshot()` + `fingerprint()` as the
 seam primitives; the checkpoint writer is applicant-authored.
+
+**Note on `state_hash`:** `fingerprint()` includes per-node metadata (node id +
+sequence). It is therefore a *per-node integrity measure* — the same store
+state recorded on two different nodes produces two different checkpoints, each
+anchoring that node's own history. Cross-node convergence is judged by
+`logical_state()` (payload equality), not by comparing fingerprints. This is
+deliberate: checkpoints detect tampering within one node's chain; convergence
+tests detect divergence between nodes.
 
 ## Reading notes for the applicant
 
