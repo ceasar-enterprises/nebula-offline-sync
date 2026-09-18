@@ -52,6 +52,32 @@ Only the storage and sync core lives here. Anything product-specific — NEBULA'
 UI, billing, mobile-money reconciliation, white-label tooling — is out of scope and stays
 closed.
 
+## Use of generative AI
+
+As required by the [NLnet policy on Generative AI for funded projects]
+(https://nlnet.nl/foundation/policies/generativeAI), the use of AI assistance in
+this repository is declared.
+
+Project maintainers work with LLM-based coding assistants (including an
+assistant model in the `opencode` open-source CLI). Its contribution is a
+co-authoring drafting tool, never an author:
+
+- **Specification documents, tests, and scaffolding** (merge-semantics
+  appendix, domain maps, data model, storage seam, property-test harness) are
+  produced with AI assistance and humans review and reason about each artifact.
+- **Code** (function and module implementations) may be produced as AI-assisted
+  drafts, but only lands in the repository after a named human maintainer
+  reviews, understands, and takes responsibility for it — and commits under
+  their own identity.
+- The merge core (Phase 1) is the one place where the human authorship bar is
+  highest: constructor and algorithm choices there are made by a human, with
+  the AI limited to explaining and reviewing options.
+
+Per-commit attribution: review this repository's history; each substantive
+commit lists a named human author who owns its content. A running note on AI
+assistance lives in `CONTRIBUTING.md` so contributors know the do's and
+don'ts before they submit.
+
 ## Contributing
 
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening

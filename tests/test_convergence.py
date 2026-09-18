@@ -31,9 +31,9 @@ class _MergeEngine:
             self.store.update(kind, obj_id, payload)
 
     def merge_into(self, other: "_MergeEngine") -> None:
-        # I2/I3 placeholder: counters not implemented yet. Author: true merge.
-        for item in other.store.all():
-            self.apply_event(item["kind"], item["id"], item["payload"])
+        from nebula_offline_sync.merge import merge
+
+        merge(self.store, other.store)
 
 
 @pytest.fixture
@@ -84,7 +84,6 @@ def test_i4_paid_status_propagates(node_a, node_b):
     node_b.merge_into(node_a)
 
 
-@pytest.mark.skip(reason="Phase 1 merge semantics are applicant-authored")
 def test_i5_merge_is_idempotent(node_a):
     """Merging a node with itself changes nothing (no counter drift)."""
     node_a.apply_event("product", "P1", {"stock": 7, "name": "Item"})
